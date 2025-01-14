@@ -1,16 +1,40 @@
-# This is a sample Python script.
+import ollama
+import streamlit as st
 
-# Press Maiusc+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+# Init ollama client
+client = ollama.Client()
+
+st.title("Job interview simulator")
+
+# Define model
+if "messages" not in st.session_state:
+    st.session_state["messages"] = []
+
+if "model" not in st.session_state:
+    st.session_state["model"] = "interviewer"
+
+for message in st.session_state["messages"]:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+def model_res_generator():
+    stream = ollama.chat(
+        model=st.session_state["model"],
+        messages=st.session_state["messages"],
+        stream=True
+    )
+    for chunk in stream:
+        yield chunk["message"]["content"]
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+userInput = st.chat_input("What is up?")
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+st.session_state["messages"].append({"role": "user", "content": userInput})
+
+with st.chat_message("user"):
+    st.markdown(userInput)
+
+with st.chat_message("assistant"):
+    message = st.write_stream(model_res_generator())
+    st.session_state["messages"].append({"role": "assistant", "content": message, "toDisplay": message})
